@@ -1,0 +1,33 @@
+# Godot generated files
+.godot/
+.import/
+
+# Exported builds
+build/
+dist/
+exports/
+
+# Local editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+*.p12
+*.pem
+
+# Test and coverage output
+coverage/
+test-results/
