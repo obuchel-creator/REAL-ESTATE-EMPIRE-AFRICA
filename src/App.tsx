@@ -93,10 +93,10 @@ export default function App() {
           <PropertiesView gameState={gameState} setActiveTab={setActiveTab} />
         )}
         {activeTab === 'construction' && (
-          <ConstructionView setActiveTab={setActiveTab} />
+          <ConstructionView gameState={gameState} setGameState={setGameState} setActiveTab={setActiveTab} />
         )}
         {activeTab === 'tenants' && <TenantsView />}
-        {activeTab === 'finance' && <FinanceView gameState={gameState} />}
+        {activeTab === 'finance' && <FinanceView gameState={gameState} setGameState={setGameState} />}
         {activeTab === 'economy' && <MarketView gameState={gameState} />}
         {activeTab === 'engine' && <EngineInspectorView />}
         {activeTab === 'education' && <EducationView />}

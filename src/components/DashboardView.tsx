@@ -1,5 +1,5 @@
-import React from 'react';
-import { Building2, Wallet, TrendingUp, ShieldAlert, Award, MapPin, ArrowUpRight, ArrowRight, Activity } from 'lucide-react';
+import React, { useState } from 'react';
+import { Building2, Wallet, TrendingUp, ShieldAlert, Award, MapPin, ArrowUpRight, ArrowRight, Activity, Landmark } from 'lucide-react';
 import { GameState } from '../types';
 import { formatUGX, UGANDA_LOCATIONS } from '../data/UgandaConfig';
 import { FinanceManager } from '../engine/FinanceManager';
@@ -15,7 +15,21 @@ interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({ gameState, setActiveTab, onAdvanceMonth }) => {
   const currentLocation = UGANDA_LOCATIONS.find((l) => l.id === gameState.currentLocationId) || UGANDA_LOCATIONS[0];
   const totalAssets = FinanceManager.calculateTotalAssets(gameState.properties, gameState.cashUGX);
-  const netWorth = FinanceManager.calculateNetWorth(totalAssets, gameState.liabilitiesUGX);
+  const totalLiabilities = FinanceManager.calculateTotalLiabilities(gameState.loans);
+  const netWorth = FinanceManager.calculateNetWorth(totalAssets, totalLiabilities);
+
+  // Calculate monthly rental income across rented properties
+  const grossMonthlyRentalIncome = gameState.properties
+    .filter((p) => p.status === 'Rented')
+    .reduce((acc, p) => acc + Math.round(p.monthlyRentalIncomeUGX * p.occupancyRate), 0);
+
+  // Calculate monthly debt service installments
+  const monthlyDebtService = gameState.loans
+    .filter((l) => l.status === 'ACTIVE')
+    .reduce((acc, l) => acc + Math.round(l.monthlyPaymentUGX), 0);
+
+  const monthlyAdministrativeOverhead = 500000; // UGX 500k base admin expense
+  const netMonthlyCashflow = grossMonthlyRentalIncome - monthlyDebtService - monthlyAdministrativeOverhead;
 
   return (
     <div className="space-y-6">
@@ -61,35 +75,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ gameState, setActi
 
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-2">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-medium uppercase tracking-wider">Total Assets</span>
-            <Building2 className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs font-medium uppercase tracking-wider">Net Monthly Cashflow</span>
+            <TrendingUp className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-2xl font-bold font-mono text-white tracking-tight">
-            {formatUGX(totalAssets)}
+          <div className={`text-2xl font-bold font-mono tracking-tight ${netMonthlyCashflow >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {netMonthlyCashflow >= 0 ? '+' : ''}{formatUGX(netMonthlyCashflow)}
           </div>
-          <p className="text-xs text-slate-500">{gameState.properties.length} properties registered</p>
+          <p className="text-xs text-slate-500">After debt service & admin</p>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-2">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-xs font-medium uppercase tracking-wider">Total Debt / Liabilities</span>
+            <Landmark className="w-4 h-4 text-rose-400" />
+          </div>
+          <div className="text-2xl font-bold font-mono text-rose-400 tracking-tight">
+            {formatUGX(totalLiabilities)}
+          </div>
+          <p className="text-xs text-slate-500">{gameState.loans.filter(l => l.status === 'ACTIVE').length} active bank facilities</p>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-2">
           <div className="flex items-center justify-between text-slate-400">
             <span className="text-xs font-medium uppercase tracking-wider">Net Worth</span>
-            <TrendingUp className="w-4 h-4 text-emerald-400" />
+            <Building2 className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="text-2xl font-bold font-mono text-emerald-400 tracking-tight">
             {formatUGX(netWorth)}
           </div>
-          <p className="text-xs text-slate-500">Assets minus liabilities</p>
-        </div>
-
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-2">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-medium uppercase tracking-wider">Business Title</span>
-            <Award className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div className="text-lg font-bold text-white truncate">
-            {gameState.player.businessTitle}
-          </div>
-          <p className="text-xs text-slate-500">Level {gameState.player.businessLevel} Enterprise</p>
+          <p className="text-xs text-slate-500">Assets minus total debt</p>
         </div>
       </div>
 
@@ -140,7 +154,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ gameState, setActi
 
           <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
             <span>Simulation Date: <strong className="text-slate-200 font-mono">{SimulationClock.formatDate(gameState.date)}</strong></span>
-            <span>Macro Inflation: <strong className="text-slate-200 font-mono">{(gameState.macroEconomy.inflationRate * 100).toFixed(1)}%</strong></span>
+            <span>Tax Compliance: <strong className={`font-semibold ${gameState.taxComplianceStatus === 'COMPLIANT' ? 'text-emerald-400' : 'text-rose-400'}`}>{gameState.taxComplianceStatus}</strong></span>
           </div>
         </div>
 

@@ -21,11 +21,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ gameState, setGameSt
   };
 
   const handleReset = () => {
-    if (window.confirm('Are you sure you want to reset your real estate empire? All progress will be lost.')) {
-      SaveManager.clearSave();
+    if (window.confirm('Are you sure you want to reset your real estate empire? Your current progress will be snapshotted before reset.')) {
+      const snapSuccess = SaveManager.snapshotCurrentSave();
+      if (!snapSuccess) {
+        setNotification({ message: 'Failed to create pre-reset safety snapshot. Reset aborted.', success: false });
+        return;
+      }
+      const clearSuccess = SaveManager.clearSave();
+      if (!clearSuccess) {
+        SaveManager.restoreSnapshot();
+        setNotification({ message: 'Failed to clear save storage securely. Reset aborted and restored.', success: false });
+        return;
+      }
       const fresh = SaveManager.createInitialGameState();
       setGameState(fresh);
-      setNotification({ message: 'Game progress reset to initial starting state.', success: true });
+      SaveManager.saveGame(fresh);
+      setNotification({ message: 'Game progress reset to initial starting state (previous progress snapshotted).', success: true });
     }
   };
 
@@ -44,12 +55,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ gameState, setGameSt
   const handleImport = () => {
     const res = SaveManager.importSaveJson(importJsonText);
     if (!res.success || !res.state) {
-      setNotification({ message: res.error || 'Import failed.', success: false });
+      setNotification({ message: res.error || 'Import failed. Active game preserved.', success: false });
       return;
     }
     setGameState(res.state);
-    SaveManager.saveGame(res.state);
-    setNotification({ message: 'Save file imported successfully!', success: true });
+    setNotification({ message: 'Save file imported successfully! Previous progress snapshotted.', success: true });
   };
 
   return (
