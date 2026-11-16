@@ -1,0 +1,6 @@
+{
+  "name": "Real Estate Empire - Africa",
+  "description": "Phase 1 Godot 4 & Cross-Platform Technical Prototype: Ugandan real estate investment and development simulation engine.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

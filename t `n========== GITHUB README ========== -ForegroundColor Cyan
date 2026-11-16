@@ -1,0 +1,108 @@
+warning: in the working copy of 'C:\Users\ambrose atipo\Downloads\REAL-ESTATE-EMPIRE-AFRICA-AI-STUDIO-BACKUP\README.md', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git "a/C:\\Users\\ambrose atipo\\Downloads\\REAL-ESTATE-EMPIRE-AFRICA-GITHUB\\README.md" "b/C:\\Users\\ambrose atipo\\Downloads\\REAL-ESTATE-EMPIRE-AFRICA-AI-STUDIO-BACKUP\\README.md"[m
+[1mindex 9d17140..a01d354 100644[m
+[1m--- "a/C:\\Users\\ambrose atipo\\Downloads\\REAL-ESTATE-EMPIRE-AFRICA-GITHUB\\README.md"[m	
+[1m+++ "b/C:\\Users\\ambrose atipo\\Downloads\\REAL-ESTATE-EMPIRE-AFRICA-AI-STUDIO-BACKUP\\README.md"[m	
+[36m@@ -1,70 +1,46 @@[m
+[31m-# REAL ESTATE EMPIRE – AFRICA[m
+[32m+[m[32m# REAL ESTATE EMPIRE – AFRICA 🏢🌍[m
+ [m
+[31m-**An Africa-first real estate investment and development simulation game.**[m
+[32m+[m[32m**REAL ESTATE EMPIRE – AFRICA** is a cross-platform real estate economic simulation and property tycoon game built with a Uganda-first economic engine and designed for regional expansion across the African continent.[m
+ [m
+[31m-REAL ESTATE EMPIRE – AFRICA is a strategy and management simulation in which players build wealth by acquiring land, developing property, managing tenants, financing projects and expanding a real estate portfolio. The first playable market is Uganda, with a modular country system designed for expansion across Africa.[m
+[32m+[m[32mPlayers start with realistic capital tiers, acquire plots across authentic land tenure systems, manage phased construction, navigate commercial bank financing and rental taxation, and compete against AI-driven developers to build a multi-generational property empire.[m
+ [m
+[31m-## Target platforms[m
+[32m+[m[32m---[m
+ [m
+[31m-- Android[m
+[31m-- Web[m
+[31m-- Windows[m
+[31m-- macOS[m
+[31m-- Linux[m
+[32m+[m[32m## Key Features[m
+ [m
+[31m-## Project status[m
+[32m+[m[32m* **Uganda-First Economic Simulation Engine:** Modeled around authentic Ugandan real estate dynamics—including UGX/USD dual-currency mechanics, commercial interest rates, construction material inflation, and URA rental income tax compliance.[m
+[32m+[m[32m* **Authentic Land Tenure & Zoning:** Navigate **Mailo**, **Freehold**, and **Leasehold** land acquisitions across distinct market zones—from prime commercial hubs (Kololo, Nakasero) and high-velocity residential suburbs (Bukoto, Ntinda, Kira) to emerging land-banking corridors (Gayaza, Mukono, Entebbe).[m
+[32m+[m[32m* **Phased Property Development:** Manage the full development lifecycle from land acquisition, architectural approvals, and foundation work to roofing, finishing, and tenant occupancy.[m
+[32m+[m[32m* **Banking, Leverage & Cashflow Management:** Structure mortgages with Loan-to-Value (LTV) limits, manage debt service ratios, balance rental yields against maintenance decay, and reinvest cashflow into larger assets.[m
+[32m+[m[32m* **AI Competitors & Dynamic Markets:** Compete for prime parcels against AI real estate moguls while reacting to macroeconomic shifts and infrastructure upgrades.[m
+[32m+[m[32m* **African Regional Expansion:** Unlock and scale operations into major regional hubs including Nairobi, Kigali, Dar es Salaam, and Lagos.[m
+ [m
+[31m-**Stage:** Project foundation  [m
+[31m-**Implementation status:** Not yet started  [m
+[31m-**Initial market:** Uganda  [m
+[31m-**Proposed game engine:** Godot 4 (GDScript), subject to a technical export prototype before full production.[m
+[32m+[m[32m---[m
+ [m
+[31m-## Product principles[m
+[32m+[m[32m## Target Platforms[m
+ [m
+[31m-1. Uganda-first, Africa-scalable economic simulation.[m
+[31m-2. One shared gameplay and simulation codebase wherever practical.[m
+[31m-3. Offline-capable single-player core.[m
+[31m-4. Transparent, data-driven economic rules.[m
+[31m-5. No real-money investment, deposits, lending or property transactions.[m
+[31m-6. Clear separation between fictional game economy and real-world property advice.[m
+[31m-7. Accessible controls and performance-conscious builds for modest devices.[m
+[32m+[m[32mBuilt from a single TypeScript codebase for seamless cross-platform deployment:[m
+[32m+[m[32m* **Mobile:** Android[m
+[32m+[m[32m* **Web:** Progressive Web App (PWA)[m
+[32m+[m[32m* **Desktop:** Windows, macOS, and Linux[m
+ [m
+[31m-## Documentation[m
+[32m+[m[32m---[m
+ [m
+[31m-- [Project Blueprint](docs/PROJECT_BLUEPRINT.md)[m
+[31m-- [Game Design Document](docs/GAME_DESIGN_DOCUMENT.md)[m
+[31m-- [System Architecture](docs/SYSTEM_ARCHITECTURE.md)[m
+[31m-- [Development Roadmap](docs/DEVELOPMENT_ROADMAP.md)[m
+[31m-- [Uganda Economic Model](docs/UGANDA_ECONOMIC_MODEL.md)[m
+[31m-- [Testing Strategy](docs/TESTING_STRATEGY.md)[m
+[31m-- [Technical Decisions](docs/TECHNICAL_DECISIONS.md)[m
+[31m-[m
+[31m-## Proposed repository layout[m
+[32m+[m[32m## Repository Structure[m
+ [m
+ ```text[m
+[31m-.[m
+[32m+[m[32mREAL-ESTATE-EMPIRE-AFRICA/[m
+ ├── docs/[m
+[31m-├── game/[m
+[31m-│   ├── scenes/[m
+[31m-│   ├── scripts/[m
+[31m-│   ├── data/[m
+[31m-│   ├── assets/[m
+[31m-│   └── ui/[m
+[31m-├── tests/[m
+[31m-├── tools/[m
+[31m-├── project.godot[m
+[31m-├── README.md[m
+[31m-└── .gitignore[m
+[32m+[m[32m│   ├── PROJECT_BLUEPRINT.md        # Master vision and core requirements[m
+[32m+[m[32m│   ├── GAME_DESIGN_DOCUMENT.md     # Gameplay mechanics, progression, and UI flow[m
+[32m+[m[32m│   ├── SYSTEM_ARCHITECTURE.md      # Technical stack and cross-platform architecture[m
+[32m+[m[32m│   ├── DEVELOPMENT_ROADMAP.md      # Phased implementation milestones[m
+[32m+[m[32m│   ├── UGANDA_ECONOMIC_MODEL.md    # Simulation math, tenure rules, and market parameters[m
+[32m+[m[32m│   └── TESTING_STRATEGY.md         # Unit and simulation balance testing guidelines[m
+[32m+[m[32m├── src/[m
+[32m+[m[32m│   ├── engine/                     # Pure TypeScript economic simulation engine[m
+[32m+[m[32m│   ├── data/                       # Location datasets, property templates, and market events[m
+[32m+[m[32m│   └── ui/                         # Cross-platform user interface components[m
+[32m+[m[32m└── tests/[m
+[32m+[m[32m    └── engine/                     # Automated unit tests for financial and market logic[m
+ ```[m
+[31m-[m
+[31m-## Development workflow[m
+[31m-[m
+[31m-Work in small, reviewable phases. Each phase must include acceptance criteria, tests and a documented result. Do not replace established gameplay or UI without a deliberate design decision. Keep secrets, signing keys and private player data out of Git.[m
+[31m-[m
+[31m-## Disclaimer[m
+[31m-[m
+[31m-All property listings, land prices, construction costs, rents, financing terms, taxes and market events in the game are simulated. They are not offers, valuations, legal advice or financial advice. Real-world figures must be sourced, dated and reviewed before being used as calibration data.[m
+[31m-[m
+[31m-## Next milestone[m
+[31m-[m
+[31m-Create a minimal Godot 4 technical prototype, verify exports for Android, Web and desktop, then lock the engine decision before building production systems.[m
