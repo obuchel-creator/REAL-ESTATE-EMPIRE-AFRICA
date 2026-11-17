@@ -34,6 +34,39 @@ export interface UraTaxRecord {
   penaltyUGX: number;
 }
 
+export type TenantCategory = 'Individual Resident' | 'Corporate Commercial' | 'Retail / SME';
+export type LeaseStatus = 'ACTIVE' | 'EXPIRED' | 'OVERDUE' | 'PENDING';
+
+export interface TenantLease {
+  id: string;
+  propertyId: string;
+  unitName: string;
+  tenantName: string;
+  tenantCategory: TenantCategory;
+  monthlyRentUGX: number;
+  depositUGX: number;
+  leaseStartStr: string;
+  leaseDurationMonths: number;
+  monthsRemaining: number;
+  paymentReliability: number; // 0.80 to 0.99
+  status: LeaseStatus;
+  contactPhone: string;
+  lastPaidDateStr?: string;
+  missedMonths: number;
+}
+
+export interface MaintenanceRequest {
+  id: string;
+  propertyId: string;
+  unitName: string;
+  title: string;
+  description: string;
+  costUGX: number;
+  urgency: 'LOW' | 'MEDIUM' | 'HIGH';
+  status: 'PENDING' | 'RESOLVED';
+  reportedDateStr: string;
+}
+
 export interface ConstructionTemplate {
   id: string;
   name: string;
@@ -142,6 +175,39 @@ export interface OwnedProperty {
   maxLtvRatio: number;
 }
 
+export type MilestoneTriggerType = 'NET_WORTH' | 'LEVEL';
+
+export interface MilestoneRewards {
+  cashBonusUGX?: number;
+  experienceBonus?: number;
+  reputationBonus?: number;
+  interestRateDiscount?: number; // Annual mortgage rate reduction (e.g. 0.01 = -1.0% p.a.)
+  originationFeeDiscount?: number; // Origination fee reduction (e.g. 0.0075 = -0.75%)
+  constructionDiscountRate?: number; // Construction stage cost discount (e.g. 0.05 = 5% off)
+  ltvBonus?: number; // Additional bank LTV borrowing power (e.g. 0.05 = +5% LTV)
+  unlockTemplateId?: string; // Unlocks a gated construction template ID
+}
+
+export interface MilestoneDefinition {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  triggerType: MilestoneTriggerType;
+  thresholdValue: number;
+  badgeLabel: string;
+  rewards: MilestoneRewards;
+  rewardSummary: string[];
+}
+
+export interface UnlockedMilestoneRecord {
+  milestoneId: string;
+  unlockedAtDateStr: string;
+  unlockedAtTimestamp: number;
+  netWorthAtUnlockUGX: number;
+  levelAtUnlock: number;
+}
+
 export interface GameState {
   version: string;
   player: PlayerProfile;
@@ -152,10 +218,13 @@ export interface GameState {
   properties: OwnedProperty[];
   constructionProjects: ConstructionProject[];
   loans: LoanFacility[];
+  tenants?: TenantLease[];
+  maintenanceRequests?: MaintenanceRequest[];
   uraTaxRecords: UraTaxRecord[];
   taxComplianceStatus: TaxComplianceStatus;
   consecutiveNegativeCashMonths: number;
   liabilitiesUGX: number;
+  unlockedMilestones?: UnlockedMilestoneRecord[];
   macroEconomy: {
     inflationRate: number;
     primeLendingRate: number;

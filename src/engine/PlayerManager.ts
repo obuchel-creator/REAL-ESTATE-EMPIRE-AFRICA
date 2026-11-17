@@ -26,10 +26,20 @@ export class PlayerManager {
     }
   }
 
+  static getXpThresholdForLevel(level: number): number {
+    if (level <= 1) return 0;
+    return (level - 1) * 500;
+  }
+
+  static getNextLevelXpThreshold(level: number): number | null {
+    if (level >= 5) return null;
+    return level * 500;
+  }
+
   static addExperience(profile: PlayerProfile, xp: number): PlayerProfile {
-    const newXp = profile.experiencePoints + xp;
+    const newXp = Math.max(0, profile.experiencePoints + Math.round(xp));
     let newLevel = profile.businessLevel;
-    if (newXp >= newLevel * 500 && newLevel < 5) {
+    while (newLevel < 5 && newXp >= newLevel * 500) {
       newLevel += 1;
     }
     return {

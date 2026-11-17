@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wallet, TrendingUp, Building2, ShieldCheck, AlertCircle, CheckCircle, Landmark, FileText, CreditCard } from 'lucide-react';
+import { Wallet, TrendingUp, Building2, AlertCircle, CheckCircle, Landmark, FileText, CreditCard, ChevronDown, ChevronUp, Percent, Calendar } from 'lucide-react';
 import { GameState, LoanFacility, LoanType, UraTaxRecord } from '../types';
 import { formatUGX } from '../data/UgandaConfig';
 import { FinanceManager } from '../engine/FinanceManager';
@@ -15,6 +15,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ gameState, setGameStat
   const [requestedLoanUGX, setRequestedLoanUGX] = useState<number>(50000000); // 50M UGX default
   const [tenorMonths, setTenorMonths] = useState<number>(60); // 5 years
   const [notification, setNotification] = useState<{ message: string; success: boolean } | null>(null);
+  const [repayingLoanId, setRepayingLoanId] = useState<string | null>(null);
+  const [customRepayAmount, setCustomRepayAmount] = useState<number>(10000000);
 
   const totalAssets = FinanceManager.calculateTotalAssets(gameState.properties, gameState.cashUGX);
   const totalLiabilities = FinanceManager.calculateTotalLiabilities(gameState.loans);
@@ -23,81 +25,33 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ gameState, setGameStat
   const selectedProperty = gameState.properties.find((p) => p.id === selectedPropertyId);
   const maxBorrowingPower = selectedProperty ? Math.round(selectedProperty.currentValuationUGX * selectedProperty.maxLtvRatio) : 0;
 
+  const currentRate = loanType === 'CONSTRUCTION_FACILITY' ? 0.19 : loanType === 'LAND_ACQUISITION' ? 0.21 : 0.17;
+  const currentOriginationFee = Math.round(requestedLoanUGX * 0.015);
+  const estimatedMonthlyPayment = FinanceManager.calculateMonthlyPayment(requestedLoanUGX, currentRate, tenorMonths);
+  const netDisbursal = requestedLoanUGX - currentOriginationFee;
+
   const handleApplyLoan = () => {
-    let msg = '';
-    let success = false;
-
-    if (!selectedProperty) {
-      setNotification({ message: 'Please select a collateral property.', success: false });
-      return;
+    const res = FinanceManager.takeOutLoan(gameState, selectedPropertyId, loanType, requestedLoanUGX, tenorMonths);
+    if (!res.success) {
+      setNotification({ message: res.error || 'Loan application failed.', success: false });
+    } else {
+      setGameState(res.newGameState);
+      setNotification({
+        message: `Successfully secured loan facility of ${formatUGX(requestedLoanUGX)} with monthly installment of ${formatUGX(estimatedMonthlyPayment)}!`,
+        success: true,
+      });
     }
+  };
 
-    if (!selectedProperty.titleVerified && loanType !== 'LAND_ACQUISITION') {
-      setNotification({ message: 'Property title must be verified at Ministry of Lands before applying for construction or equity loans.', success: false });
-      return;
+  const handleRepayEarly = (loanId: string, amount: number) => {
+    const res = FinanceManager.repayLoanEarly(gameState, loanId, amount);
+    if (!res.success) {
+      setNotification({ message: res.error || 'Loan repayment failed.', success: false });
+    } else {
+      setGameState(res.newGameState);
+      setNotification({ message: `Successfully repaid ${formatUGX(amount)} towards loan principal!`, success: true });
+      setRepayingLoanId(null);
     }
-
-    if (requestedLoanUGX > maxBorrowingPower) {
-      setNotification({ message: `Loan requested exceeds property LTV borrowing power (${formatUGX(maxBorrowingPower)}).`, success: false });
-      return;
-    }
-
-    if (gameState.taxComplianceStatus === 'PENALIZED') {
-      setNotification({ message: 'Loan applications frozen by commercial banks due to active URA tax penalties.', success: false });
-      return;
-    }
-
-    setGameState((prev) => {
-      const prop = prev.properties.find((p) => p.id === selectedPropertyId);
-      if (!prop) return prev;
-
-      const interestRate = 0.18; // 18% annual commercial bank rate
-      const originationFee = Math.round(requestedLoanUGX * 0.015); // 1.5% origination fee
-      const monthlyPayment = FinanceManager.calculateMonthlyPayment(requestedLoanUGX, interestRate, tenorMonths);
-      const totalOutflow = originationFee; // cash received = principal - origination fee
-
-      const res = FinanceManager.recordTransaction(
-        prev.cashUGX,
-        prev.transactions,
-        'LOAN',
-        `Commercial Bank Loan Disbursal (${loanType}) secured on ${prop.title} (Fee: ${formatUGX(originationFee)})`,
-        requestedLoanUGX - originationFee,
-        prop.id,
-        true
-      );
-
-      if (!res.success) {
-        msg = res.error || 'Loan processing failed.';
-        return prev;
-      }
-
-      success = true;
-      msg = `Successfully secured loan of ${formatUGX(requestedLoanUGX)} with monthly installment of ${formatUGX(monthlyPayment)}!`;
-
-      const newLoan: LoanFacility = {
-        id: 'loan_' + Date.now(),
-        propertyId: prop.id,
-        loanType,
-        principalUGX: requestedLoanUGX,
-        remainingBalanceUGX: requestedLoanUGX,
-        interestRateAnnual: interestRate,
-        monthlyPaymentUGX: monthlyPayment,
-        tenorMonths,
-        monthsPaid: 0,
-        status: 'ACTIVE',
-        originationFeeUGX: originationFee,
-      };
-
-      return {
-        ...prev,
-        cashUGX: res.newCash,
-        transactions: res.newTransactions,
-        loans: [...prev.loans, newLoan],
-        liabilitiesUGX: prev.liabilitiesUGX + requestedLoanUGX,
-      };
-    });
-
-    setNotification({ message: msg, success });
   };
 
   const handlePayUraTax = (recordId: string) => {
@@ -140,6 +94,20 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ gameState, setGameStat
     });
 
     setNotification({ message: msg, success });
+  };
+
+  const activeLoans = gameState.loans.filter((l) => l.status === 'ACTIVE');
+
+  const getLoanTypeLabel = (type: LoanType): string => {
+    switch (type) {
+      case 'CONSTRUCTION_FACILITY':
+        return 'Construction Development Facility';
+      case 'LAND_ACQUISITION':
+        return 'Land Acquisition Loan';
+      case 'EQUITY_RELEASE':
+      default:
+        return 'Equity Release Mortgage';
+    }
   };
 
   return (
@@ -195,11 +163,15 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ gameState, setGameStat
                 onChange={(e) => setSelectedPropertyId(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
               >
-                {gameState.properties.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title} ({p.tenureType} · Valuation: {formatUGX(p.currentValuationUGX)})
-                  </option>
-                ))}
+                {gameState.properties.length === 0 ? (
+                  <option value="">No properties owned - acquire land first</option>
+                ) : (
+                  gameState.properties.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title} ({p.tenureType} · Valuation: {formatUGX(p.currentValuationUGX)})
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -224,9 +196,9 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ gameState, setGameStat
                   onChange={(e) => setLoanType(e.target.value as LoanType)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 >
-                  <option value="EQUITY_RELEASE">Equity Release Mortgage</option>
-                  <option value="CONSTRUCTION_FACILITY">Construction Development Facility</option>
-                  <option value="LAND_ACQUISITION">Land Acquisition Loan</option>
+                  <option value="EQUITY_RELEASE">Equity Release Mortgage (17.0% p.a.)</option>
+                  <option value="CONSTRUCTION_FACILITY">Construction Development Facility (19.0% p.a.)</option>
+                  <option value="LAND_ACQUISITION">Land Acquisition Loan (21.0% p.a.)</option>
                 </select>
               </div>
 
@@ -242,33 +214,232 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ gameState, setGameStat
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-300">Loan Tenor (Months)</label>
+                <select
+                  value={tenorMonths}
+                  onChange={(e) => setTenorMonths(parseInt(e.target.value) || 60)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                >
+                  <option value={12}>12 Months (1 Year)</option>
+                  <option value={24}>24 Months (2 Years)</option>
+                  <option value={36}>36 Months (3 Years)</option>
+                  <option value={60}>60 Months (5 Years)</option>
+                  <option value={120}>120 Months (10 Years)</option>
+                </select>
+              </div>
+
+              <div className="bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs flex flex-col justify-center">
+                <span className="text-slate-400 text-[10px]">Estimated Monthly Payment</span>
+                <span className="text-emerald-400 font-mono font-bold text-sm">{formatUGX(estimatedMonthlyPayment)}</span>
+                <span className="text-slate-500 text-[10px]">Origination fee: {formatUGX(currentOriginationFee)}</span>
+              </div>
+            </div>
+
             <button
               onClick={handleApplyLoan}
-              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg transition-colors shadow-sm"
+              disabled={gameState.properties.length === 0}
+              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-semibold text-xs rounded-lg transition-colors shadow-sm cursor-pointer disabled:cursor-not-allowed"
             >
               Apply for Bank Loan Facility
             </button>
           </div>
 
-          {/* Active Loans List */}
-          <div className="border-t border-slate-800 pt-5 space-y-3">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">Active Bank Loans ({gameState.loans.filter(l => l.status === 'ACTIVE').length})</h4>
-            {gameState.loans.filter((l) => l.status === 'ACTIVE').length === 0 ? (
-              <p className="text-xs text-slate-500">No active commercial bank loans.</p>
+          {/* Active Mortgages & Loan Facilities */}
+          <div className="border-t border-slate-800 pt-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-emerald-400" />
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                  Active Mortgages & Credit Facilities ({activeLoans.length})
+                </h4>
+              </div>
+              <span className="text-[11px] font-mono text-slate-400">
+                Total Debt: <strong className="text-rose-400">{formatUGX(totalLiabilities)}</strong>
+              </span>
+            </div>
+
+            {activeLoans.length === 0 ? (
+              <div className="bg-slate-950/60 border border-dashed border-slate-800 rounded-lg p-5 text-center space-y-1">
+                <p className="text-xs text-slate-400 font-medium">No active commercial mortgages or loans.</p>
+                <p className="text-[11px] text-slate-500">
+                  Select an owned property with a verified title above to take out a construction or equity mortgage facility.
+                </p>
+              </div>
             ) : (
-              <div className="space-y-2">
-                {gameState.loans.filter((l) => l.status === 'ACTIVE').map((loan) => (
-                  <div key={loan.id} className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs space-y-1">
-                    <div className="flex justify-between">
-                      <span className="font-bold text-white">{loan.loanType}</span>
-                      <span className="text-emerald-400 font-mono">{formatUGX(loan.remainingBalanceUGX)} balance</span>
+              <div className="space-y-4">
+                {activeLoans.map((loan) => {
+                  const collateralProp = gameState.properties.find((p) => p.id === loan.propertyId);
+                  const isRepaying = repayingLoanId === loan.id;
+                  const progressPct = Math.min(100, Math.round(((loan.principalUGX - loan.remainingBalanceUGX) / loan.principalUGX) * 100));
+                  const maxRepayable = Math.min(loan.remainingBalanceUGX, gameState.cashUGX);
+
+                  return (
+                    <div
+                      key={loan.id}
+                      className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3.5 shadow-xs transition-all hover:border-slate-700"
+                    >
+                      {/* Top Bar: Loan Type & Collateral */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-white text-xs tracking-tight">
+                              {getLoanTypeLabel(loan.loanType)}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-950 border border-emerald-500/30 text-emerald-400">
+                              ACTIVE
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-400 block mt-0.5">
+                            Collateral: <strong className="text-slate-300">{collateralProp ? collateralProp.title : 'Owned Property'}</strong>
+                            {collateralProp && ` (${collateralProp.tenureType})`}
+                          </span>
+                        </div>
+
+                        <div className="text-right">
+                          <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Remaining Principal</span>
+                          <span className="text-base font-bold font-mono text-rose-400">
+                            {formatUGX(loan.remainingBalanceUGX)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Metrics Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                        <div className="bg-slate-900/80 border border-slate-800/80 rounded-lg p-2.5">
+                          <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Interest Rate</span>
+                          <span className="font-mono font-semibold text-emerald-400 text-xs">
+                            {(loan.interestRateAnnual * 100).toFixed(1)}% p.a.
+                          </span>
+                        </div>
+
+                        <div className="bg-slate-900/80 border border-slate-800/80 rounded-lg p-2.5">
+                          <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Monthly Installment</span>
+                          <span className="font-mono font-semibold text-white text-xs">
+                            {formatUGX(loan.monthlyPaymentUGX)}
+                          </span>
+                        </div>
+
+                        <div className="bg-slate-900/80 border border-slate-800/80 rounded-lg p-2.5">
+                          <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Original Loan</span>
+                          <span className="font-mono font-semibold text-slate-300 text-xs">
+                            {formatUGX(loan.principalUGX)}
+                          </span>
+                        </div>
+
+                        <div className="bg-slate-900/80 border border-slate-800/80 rounded-lg p-2.5">
+                          <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Tenor Progress</span>
+                          <span className="font-mono font-semibold text-slate-300 text-xs">
+                            {loan.monthsPaid} / {loan.tenorMonths} mo
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Principal Amortization Progress Bar */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[11px] text-slate-400 font-mono">
+                          <span>Principal Amortized: {progressPct}%</span>
+                          <span>Remaining Term: {loan.tenorMonths - loan.monthsPaid} months</span>
+                        </div>
+                        <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
+                            style={{ width: `${progressPct}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Early Principal Repayment Action Button */}
+                      <div className="pt-1">
+                        {!isRepaying ? (
+                          <button
+                            onClick={() => {
+                              setRepayingLoanId(loan.id);
+                              setCustomRepayAmount(Math.min(10000000, loan.remainingBalanceUGX));
+                            }}
+                            className="w-full py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-emerald-500/50 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                          >
+                            <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Make Early Principal Repayment</span>
+                          </button>
+                        ) : (
+                          <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-3.5 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                                <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                                Early Principal Repayment Desk
+                              </span>
+                              <button
+                                onClick={() => setRepayingLoanId(null)}
+                                className="text-xs text-slate-400 hover:text-white"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+
+                            <p className="text-[11px] text-slate-400">
+                              Paying down principal early saves future interest and lowers your overall liabilities.
+                              Available liquid cash: <strong className="text-emerald-400 font-mono">{formatUGX(gameState.cashUGX)}</strong>
+                            </p>
+
+                            <div className="space-y-2">
+                              <label className="text-[11px] font-medium text-slate-300">
+                                Repayment Amount (UGX)
+                              </label>
+                              <input
+                                type="number"
+                                step="1000000"
+                                min="100000"
+                                max={loan.remainingBalanceUGX}
+                                value={customRepayAmount}
+                                onChange={(e) => setCustomRepayAmount(Math.max(0, parseInt(e.target.value) || 0))}
+                                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-emerald-500"
+                              />
+                            </div>
+
+                            {/* Quick Preset Buttons */}
+                            <div className="flex flex-wrap gap-1.5">
+                              {[5000000, 10000000, 25000000].map((amt) => (
+                                <button
+                                  key={amt}
+                                  type="button"
+                                  onClick={() => setCustomRepayAmount(Math.min(amt, loan.remainingBalanceUGX))}
+                                  disabled={amt > loan.remainingBalanceUGX}
+                                  className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 disabled:opacity-40 border border-slate-800 text-[11px] rounded font-mono text-slate-300 hover:text-white"
+                                >
+                                  +{formatUGX(amt)}
+                                </button>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => setCustomRepayAmount(loan.remainingBalanceUGX)}
+                                className="px-2.5 py-1 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/40 text-[11px] rounded font-mono text-emerald-300"
+                              >
+                                Pay Full Balance ({formatUGX(loan.remainingBalanceUGX)})
+                              </button>
+                            </div>
+
+                            {customRepayAmount > gameState.cashUGX && (
+                              <div className="text-[11px] text-rose-400 flex items-center gap-1.5">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                <span>Insufficient cash. You have {formatUGX(gameState.cashUGX)} available.</span>
+                              </div>
+                            )}
+
+                            <button
+                              onClick={() => handleRepayEarly(loan.id, customRepayAmount)}
+                              disabled={customRepayAmount <= 0 || customRepayAmount > gameState.cashUGX}
+                              className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed shadow-xs"
+                            >
+                              Confirm Early Repayment of {formatUGX(customRepayAmount)}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex justify-between text-slate-400">
-                      <span>Monthly Installment: {formatUGX(loan.monthlyPaymentUGX)}</span>
-                      <span>Rate: {(loan.interestRateAnnual * 100).toFixed(1)}% p.a.</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

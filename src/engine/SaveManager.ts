@@ -56,10 +56,13 @@ export class SaveManager {
       properties: [],
       constructionProjects: [],
       loans: [],
+      tenants: [],
+      maintenanceRequests: [],
       uraTaxRecords: [],
       taxComplianceStatus: 'COMPLIANT',
       consecutiveNegativeCashMonths: 0,
       liabilitiesUGX: 0,
+      unlockedMilestones: [],
       macroEconomy: { ...INITIAL_MACRO_ECONOMY },
       settings: {
         soundEnabled: true,
@@ -116,23 +119,37 @@ export class SaveManager {
     try {
       const raw = localStorage.getItem(keys.primary);
       if (raw) {
-        const parsed = JSON.parse(raw);
-        if (SaveManager.validateGameState(parsed)) {
-          return parsed as GameState;
+        try {
+          const parsed = JSON.parse(raw);
+          if (SaveManager.validateGameState(parsed)) {
+            parsed.tenants = Array.isArray(parsed.tenants) ? parsed.tenants : [];
+            parsed.maintenanceRequests = Array.isArray(parsed.maintenanceRequests) ? parsed.maintenanceRequests : [];
+            parsed.unlockedMilestones = Array.isArray(parsed.unlockedMilestones) ? parsed.unlockedMilestones : [];
+            return parsed as GameState;
+          }
+        } catch (parseErr) {
+          console.warn('Primary save parse error, attempting backup:', parseErr);
         }
       }
 
       // Primary missing or invalid, attempt validated backup recovery before new game
       const backupRaw = localStorage.getItem(keys.backup);
       if (backupRaw) {
-        const backupParsed = JSON.parse(backupRaw);
-        if (SaveManager.validateGameState(backupParsed)) {
-          localStorage.setItem(keys.primary, backupRaw);
-          return backupParsed as GameState;
+        try {
+          const backupParsed = JSON.parse(backupRaw);
+          if (SaveManager.validateGameState(backupParsed)) {
+            backupParsed.tenants = Array.isArray(backupParsed.tenants) ? backupParsed.tenants : [];
+            backupParsed.maintenanceRequests = Array.isArray(backupParsed.maintenanceRequests) ? backupParsed.maintenanceRequests : [];
+            backupParsed.unlockedMilestones = Array.isArray(backupParsed.unlockedMilestones) ? backupParsed.unlockedMilestones : [];
+            localStorage.setItem(keys.primary, backupRaw);
+            return backupParsed as GameState;
+          }
+        } catch (backupErr) {
+          console.warn('Backup save parse error:', backupErr);
         }
       }
     } catch (e) {
-      console.warn('Primary and backup recovery encountered error:', e);
+      console.warn('Storage read encountered error:', e);
     }
 
     return SaveManager.createInitialGameState();
@@ -176,6 +193,9 @@ export class SaveManager {
       if (!SaveManager.validateGameState(parsed)) {
         return { success: false, error: 'Imported JSON does not match Real Estate Empire Africa schema requirements.' };
       }
+      parsed.tenants = Array.isArray(parsed.tenants) ? parsed.tenants : [];
+      parsed.maintenanceRequests = Array.isArray(parsed.maintenanceRequests) ? parsed.maintenanceRequests : [];
+      parsed.unlockedMilestones = Array.isArray(parsed.unlockedMilestones) ? parsed.unlockedMilestones : [];
       SaveManager.snapshotCurrentSave();
       const saved = SaveManager.saveGame(parsed as GameState);
       if (!saved) {

@@ -83,6 +83,9 @@ export class GameEngineTests {
     // 22. Sprint 3: Tax Penalty & Compliance Triggers
     results.push(GameEngineTests.testTaxComplianceTriggers());
 
+    // 23. Sprint 3: Early Principal Mortgage Repayment
+    results.push(GameEngineTests.testEarlyMortgageRepayment());
+
     // Reset test storage prefix after tests
     SaveManager.setTestStoragePrefix(null);
 
@@ -146,7 +149,7 @@ export class GameEngineTests {
     const start = performance.now();
     try {
       const inc = FinanceManager.recordTransaction(50000000, [], 'INCOME', 'Rent', 2500000);
-      const exp = FinanceManager.recordTransaction(inc.newCash, inc.newTransactions, 'EXPENSE', 'Fee', 500000);
+      const exp = FinanceManager.recordTransaction(inc.newCash, inc.newTransactions, 'EXPENSE', 'Fee', -500000);
       const passed = inc.success && exp.success && exp.newCash === 52000000;
       return {
         id: 'reg_4_finance',
@@ -164,7 +167,7 @@ export class GameEngineTests {
     const start = performance.now();
     try {
       const initialCash = 1000000;
-      const res = FinanceManager.recordTransaction(initialCash, [], 'EXPENSE', 'Too Expensive', 5000000);
+      const res = FinanceManager.recordTransaction(initialCash, [], 'EXPENSE', 'Too Expensive', -5000000);
       const passed = !res.success && res.newCash === initialCash && res.error !== undefined;
       return {
         id: 'reg_5_insufficient',
@@ -387,7 +390,7 @@ export class GameEngineTests {
       const annualRate = 0.14;
       const monthlyAppreciation = initialValuation * (annualRate / 12);
       const newAppreciatedValuation = Math.round(initialValuation + monthlyAppreciation);
-      const passed = newAppreciatedValuation === 10116667;
+      const passed = newAppreciatedValuation === 101166667;
       return {
         id: 's1_3_appreciation',
         name: 'Sprint 1: Property Valuation Appreciation Math',
@@ -552,6 +555,54 @@ export class GameEngineTests {
       };
     } catch (e) {
       return { id: 's3_4_tax_compliance', name: 'Sprint 3: Tax Compliance', passed: false, message: (e as Error).message, durationMs: Math.round(performance.now() - start) };
+    }
+  }
+
+  private static testEarlyMortgageRepayment(): TestResultItem {
+    const start = performance.now();
+    try {
+      const state = SaveManager.createInitialGameState();
+      state.properties = [{
+        id: 'prop_repay_test',
+        title: 'Kololo Heights',
+        locationId: 'kololo',
+        tenureType: 'FREEHOLD',
+        zoneTier: 'PRIME',
+        sizeDecimals: 20,
+        purchasePriceUGX: 500000000,
+        currentValuationUGX: 600000000,
+        purchaseDateStr: '2026-01-01',
+        status: 'Raw Land',
+        monthlyRentalIncomeUGX: 0,
+        occupancyRate: 0,
+        titleVerified: true,
+        kibanjaCleared: true,
+        kibanjaClearanceCostUGX: 0,
+        maxLtvRatio: 0.75,
+      }];
+      state.cashUGX = 100000000;
+
+      const loanRes = FinanceManager.takeOutLoan(state, 'prop_repay_test', 'CONSTRUCTION_FACILITY', 100000000, 60);
+      if (!loanRes.success) throw new Error(loanRes.error);
+
+      const loanId = loanRes.newGameState.loans[0].id;
+      const initialRemaining = loanRes.newGameState.loans[0].remainingBalanceUGX;
+      
+      const repayRes = FinanceManager.repayLoanEarly(loanRes.newGameState, loanId, 30000000);
+      if (!repayRes.success) throw new Error(repayRes.error);
+
+      const updatedLoan = repayRes.newGameState.loans.find(l => l.id === loanId);
+      const passed = updatedLoan !== undefined && updatedLoan.remainingBalanceUGX === (initialRemaining - 30000000);
+
+      return {
+        id: 's3_5_early_repay',
+        name: 'Sprint 3: Early Principal Mortgage Repayment',
+        passed,
+        message: passed ? 'Early principal repayment successfully reduced remaining balance and liabilities.' : 'Early repayment failed.',
+        durationMs: Math.round(performance.now() - start),
+      };
+    } catch (e) {
+      return { id: 's3_5_early_repay', name: 'Sprint 3: Early Principal Repayment', passed: false, message: (e as Error).message, durationMs: Math.round(performance.now() - start) };
     }
   }
 }

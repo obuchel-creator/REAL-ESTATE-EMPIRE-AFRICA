@@ -36,20 +36,22 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Zone 2: Navigation Links */}
-        <nav className="hidden xl:flex items-center gap-1 text-sm font-medium text-slate-300">
+        <nav className="flex items-center gap-1 text-sm font-medium text-slate-300 overflow-x-auto py-1 scrollbar-none max-w-full">
           {[
             { id: 'dashboard', label: 'Dashboard' },
             { id: 'market', label: 'Land Market' },
-            { id: 'properties', label: 'My Properties' },
+            { id: 'properties', label: 'Properties' },
+            { id: 'construction', label: 'Construction' },
+            { id: 'tenants', label: 'Tenants & Leases' },
             { id: 'finance', label: 'Finance' },
             { id: 'economy', label: 'Macro Economy' },
-            { id: 'engine', label: 'Godot Inspector' },
             { id: 'education', label: 'Academy' },
+            { id: 'engine', label: 'Godot' },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 activeTab === tab.id
                   ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
